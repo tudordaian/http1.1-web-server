@@ -1,14 +1,25 @@
 {
   "name": "http_server",
   "version": "1.0.0",
-  "description": "",
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc"
   },
-  "dependencies": {},
   "devDependencies": {
-    "typescript": "^5.5.3"
+    "@types/node": "^24.2.0",
+    "typescript": "^5.9.2"
   },
-  "private": true
+  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tudordaian/http-server.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/tudordaian/http-server/issues"
+  },
+  "homepage": "https://github.com/tudordaian/http-server#readme",
+  "description": ""
 }

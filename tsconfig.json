@@ -6,7 +6,11 @@
     "forceConsistentCasingInFileNames": true,
     "strict": true,
     "skipLibCheck": true,
-    "outDir": "dist"
+    "outDir": "dist",
+
+    // Adaugate
+    "noEmitOnError": true,   // previne scrierea in dist daca sunt erori
+    "sourceMap": true,
   },
   "include": ["src"]
 }

@@ -1,4 +1,6 @@
 import * as net from "net"
+import {DynBuf, bufPush, cutMessage} from "./buffer"
+
 
 // API Promise-based pentru socket-uri TCP
 type TCPConn = {
@@ -55,9 +57,9 @@ function soRead(conn: TCPConn): Promise<Buffer> {
             return
         }
 
-        // salvare callback-uri ale promise-ului
+        // creare pending Promise si salvare callback-uri
         conn.reader = { resolve: resolve, reject: reject }
-        // resume la 'data' pentru a finaliza promise-ul mai tarziu
+        // resume la 'data' pentru a se finaliza promise-ul la socket.on('data', () => {...})
         conn.socket.resume()
     })
 }
@@ -82,16 +84,32 @@ function soWrite(conn: TCPConn, data: Buffer): Promise<void> {
 
 async function serveClient(socket: net.Socket): Promise<void> {
     const conn: TCPConn = soInit(socket)
+    const buf: DynBuf = { data: Buffer.alloc(0), length: 0 }
     while(true) {
-        const data = await soRead(conn)
-        if(data.length === 0) {
-            console.log('connection ended')
-            break
+        // incercare de a lua 1 msg din buffer
+        const msg = cutMessage(buf)
+        if(!msg) {
+            // mai trebuie date
+            const data: Buffer = await soRead(conn)
+            bufPush(buf, data)
+            // EOF?
+            if(data.length === 0) {
+                return
+            }
+            continue
         }
 
-        console.log('buffer data:', data)
-        console.log('data as string:', JSON.stringify(data.toString('utf-8')))
-        await soWrite(conn, data)
+        // procesare mesaj si trimitere response
+        if(msg.equals(Buffer.from('quit\n'))) {
+          await soWrite(conn, Buffer.from('Bye.\n'))
+          socket.destroy()
+          return
+        } else {
+            const reply = Buffer.concat([Buffer.from('Echo: '), msg])
+            await soWrite(conn, reply)
+            console.log('buffer data:', reply)
+            console.log('data as string:', JSON.stringify(reply.toString('utf-8')))
+        }
     }
 }
 

@@ -25,7 +25,7 @@ export function bufPush(buf: DynBuf, data: Buffer): void {
     const newLen = buf.length + data.length;
     const availableSpace = buf.data.length - (buf.start + buf.length)
 
-    if (availableSpace < newLen) {
+    if (availableSpace < data.length) {
         // trebuie mai mult spatiu - compactare sau crestere
         if (buf.start > buf.data.length / 2) {
             // spatiul liber >= 1/2 capacitate, intai compactam

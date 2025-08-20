@@ -84,7 +84,7 @@ function soWrite(conn: TCPConn, data: Buffer): Promise<void> {
 
 async function serveClient(socket: net.Socket): Promise<void> {
     const conn: TCPConn = soInit(socket)
-    const buf: DynBuf = { data: Buffer.alloc(0), length: 0 }
+    const buf: DynBuf = { data: Buffer.alloc(0), length: 0, start: 0 }
     while(true) {
         // incercare de a lua 1 msg din buffer
         const msg = cutMessage(buf)

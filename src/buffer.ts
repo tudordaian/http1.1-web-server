@@ -23,7 +23,7 @@ export function cutMessage(buf: DynBuf): null | Buffer {
 
 export function bufPush(buf: DynBuf, data: Buffer): void {
     const newLen = buf.length + data.length;
-    const availableSpace = buf.data.length - buf.start
+    const availableSpace = buf.data.length - (buf.start + buf.length)
 
     if (availableSpace < newLen) {
         // trebuie mai mult spatiu - compactare sau crestere

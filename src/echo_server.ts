@@ -1,5 +1,7 @@
 import * as net from "net"
 import {DynBuf, bufPush, cutMessage} from "./buffer"
+import {BodyReader, HTTPReq, HTTPRes} from "./types";
+import {HTTPError} from "./errors";
 
 
 // API Promise-based pentru socket-uri TCP
@@ -64,61 +66,87 @@ function soRead(conn: TCPConn): Promise<Buffer> {
     })
 }
 
-function soWrite(conn: TCPConn, data: Buffer): Promise<void> {
-    console.assert(data.length > 0)
-    return new Promise((resolve, reject) => {
-        if(conn.err) {
-            reject(conn.err)
-            return
-        }
+// function soWrite(conn: TCPConn, data: Buffer): Promise<void> {
+//     console.assert(data.length > 0)
+//     return new Promise((resolve, reject) => {
+//         if(conn.err) {
+//             reject(conn.err)
+//             return
+//         }
+//
+//         conn.socket.write(data, (err?: Error | null) => {
+//             if(err) {
+//                 reject(err)
+//             } else {
+//                 resolve()
+//             }
+//         })
+//     })
+// }
 
-        conn.socket.write(data, (err?: Error | null) => {
-            if(err) {
-                reject(err)
-            } else {
-                resolve()
-            }
-        })
-    })
-}
 
-async function serveClient(socket: net.Socket): Promise<void> {
-    const conn: TCPConn = soInit(socket)
+
+async function serveClient(conn: TCPConn): Promise<void> {
     const buf: DynBuf = { data: Buffer.alloc(0), length: 0, start: 0 }
     while(true) {
-        // incercare de a lua 1 msg din buffer
-        const msg = cutMessage(buf)
+        // incercare de a lua 1 request header din buffer
+        const msg: null | HTTPReq = cutMessage(buf)
         if(!msg) {
             // mai trebuie date
             const data: Buffer = await soRead(conn)
             bufPush(buf, data)
             // EOF?
+            if(data.length === 0 && buf.length === 0) {
+                return  // nu mai sunt request-uri
+            }
             if(data.length === 0) {
-                return
+                throw new HTTPError(400, 'Unexpected EOF.')
             }
             continue
         }
 
         // procesare mesaj si trimitere response
-        if(msg.equals(Buffer.from('quit\n'))) {
-          await soWrite(conn, Buffer.from('Bye.\n'))
-          socket.destroy()
-          return
-        } else {
-            const reply = Buffer.concat([Buffer.from('Echo: '), msg])
-            await soWrite(conn, reply)
-            console.log('buffer data:', reply)
-            console.log('data as string:', JSON.stringify(reply.toString('utf-8')))
+        const reqBody: BodyReader = readerFromReq(conn, buf, msg)
+        const res: HTTPRes = await handleReq(msg, reqBody)
+        await writeHTTPResp(conn, res)
+        // inchide conexiunea pt HTTP 1.0
+        if (msg.version === '1.0') {
+            return
         }
+        // asigurarea ca req body e consumat complet
+        while ((await reqBody.read()).length > 0) { /* nimic */ }
+
+        // if(msg.equals(Buffer.from('quit\n'))) {
+        //   await soWrite(conn, Buffer.from('Bye.\n'))
+        //   socket.destroy()
+        //   return
+        // } else {
+        //     const reply = Buffer.concat([Buffer.from('Echo: '), msg])
+        //     await soWrite(conn, reply)
+        //     console.log('buffer data:', reply)
+        //     console.log('data as string:', JSON.stringify(reply.toString('utf-8')))
+        // }
     }
 }
 
 async function newConn(socket: net.Socket): Promise<void> {
+    const conn: TCPConn = soInit(socket)
     console.log(`New connection - remote address: ${socket.remoteAddress}, remote port: ${socket.remotePort} `)
     try {
-        await serveClient(socket)
+        await serveClient(conn)
     } catch(exc) {
         console.error('exception: ', exc)
+        if (exc instanceof HTTPError) {
+            // error response
+            const response: HTTPRes = {
+                code: exc.code,
+                headers: [],
+                body: readerFromMemory(Buffer.from(exc.message + '\n')),
+            }
+            try {
+                await writeHTTPResp(conn, response)
+            } catch(exc) { /* nimic */ }
+        }
     } finally {
         socket.destroy()
     }

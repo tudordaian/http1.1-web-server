@@ -1,7 +1,8 @@
 import * as net from "net"
-import {DynBuf, bufPush, cutMessage} from "./buffer"
+import {DynBuf, bufPush} from "./buffer"
 import {BodyReader, HTTPReq, HTTPRes} from "./types";
 import {HTTPError} from "./errors";
+import {cutMessage} from "./http_message";
 
 
 // API Promise-based pentru socket-uri TCP

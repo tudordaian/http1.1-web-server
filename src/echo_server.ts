@@ -116,16 +116,6 @@ async function serveClient(conn: TCPConn): Promise<void> {
         // asigurarea ca req body e consumat complet
         while ((await reqBody.read()).length > 0) { /* nimic */ }
 
-        // if(msg.equals(Buffer.from('quit\n'))) {
-        //   await soWrite(conn, Buffer.from('Bye.\n'))
-        //   socket.destroy()
-        //   return
-        // } else {
-        //     const reply = Buffer.concat([Buffer.from('Echo: '), msg])
-        //     await soWrite(conn, reply)
-        //     console.log('buffer data:', reply)
-        //     console.log('data as string:', JSON.stringify(reply.toString('utf-8')))
-        // }
     }
 }
 

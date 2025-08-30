@@ -9,6 +9,39 @@ export type DynBuf = {
 
 const kMaxHeaderLen = 1024 * 8
 
+
+function splitLines(data: Buffer): Buffer[] {
+    const lines = data.toString().split('\r\n')
+    return lines.map(line => Buffer.from(line))
+}
+
+function parseRequestLine(line: Buffer): [string, Buffer, string] {
+    const parts = line.toString().split(' ')
+    if(parts.length !== 3) {
+        throw new HTTPError(400, 'Invalid request line')
+    }
+    const method = parts[0]
+    const uri = Buffer.from(parts[1])
+    const version = parts[2]
+    return [method, uri, version]
+}
+
+function validateHeader(header: Buffer): boolean {
+    const headerStr = header.toString().trim()
+    const colonIdx = headerStr.indexOf(':')
+
+    if(colonIdx < 0) {
+        return false
+    }
+    const name = headerStr.substring(0, colonIdx).trim()
+    const value = headerStr.substring(colonIdx + 1).trim()
+
+    return name.length > 0 &&
+        !name.includes(' ') &&
+        !name.includes('\t') &&
+        value.length > 0
+}
+
 // parsarea unui HTTP request header
 function parseHTTPReq(data: Buffer): HTTPReq {
     // split data in linii
@@ -47,7 +80,7 @@ export function cutMessage(buf: DynBuf): null | HTTPReq {
     return msg
 }
 
-function bufPush(buf: DynBuf, data: Buffer): void {
+export function bufPush(buf: DynBuf, data: Buffer): void {
     const newLen = buf.length + data.length;
     if (buf.data.length < newLen) {
         // cresterea capacitatii cu putere a lui 2

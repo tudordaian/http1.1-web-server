@@ -1,3 +1,8 @@
+export type DynBuf = {
+    data: Buffer,
+    length: number,
+};
+
 export type BodyReader = {
     // "Content-Length", -1 daca e necunoscut
     length: number,

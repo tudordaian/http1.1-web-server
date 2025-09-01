@@ -1,12 +1,15 @@
 import * as net from "net"
-import {DynBuf, bufPush} from "./buffer"
-import {BodyReader, HTTPReq, HTTPRes} from "./types";
-import {HTTPError} from "./errors";
-import {cutMessage} from "./http_message";
+import {bufPush} from "./buffer/buffer_utils"
+import {DynBuf, BodyReader, HTTPReq, HTTPRes} from "./types/types";
+import {HTTPError} from "./errors/errors";
+import {cutMessage} from "./http/http_parser";
+import {handleReq} from "./http/http_handlers";
+import {readerFromMemory, readerFromReq} from "./http/http_readers";
+import {writeHTTPResp} from "./http/http_writer";
 
 
 // API Promise-based pentru socket-uri TCP
-type TCPConn = {
+export type TCPConn = {
     socket: net.Socket
     err: null | Error   // 'error' event
     ended: boolean      // 'end' event
@@ -47,7 +50,7 @@ function soInit(socket: net.Socket): TCPConn {
     return conn
 }
 
-function soRead(conn: TCPConn): Promise<Buffer> {
+export function soRead(conn: TCPConn): Promise<Buffer> {
     console.assert(!conn.reader)    // fara call-uri concurente
     return new Promise((resolve, reject) => {
         // daca conexiunea nu e readable, finalizeaza promise-ul acum
@@ -67,28 +70,28 @@ function soRead(conn: TCPConn): Promise<Buffer> {
     })
 }
 
-// function soWrite(conn: TCPConn, data: Buffer): Promise<void> {
-//     console.assert(data.length > 0)
-//     return new Promise((resolve, reject) => {
-//         if(conn.err) {
-//             reject(conn.err)
-//             return
-//         }
-//
-//         conn.socket.write(data, (err?: Error | null) => {
-//             if(err) {
-//                 reject(err)
-//             } else {
-//                 resolve()
-//             }
-//         })
-//     })
-// }
+export function soWrite(conn: TCPConn, data: Buffer): Promise<void> {
+    console.assert(data.length > 0)
+    return new Promise((resolve, reject) => {
+        if(conn.err) {
+            reject(conn.err)
+            return
+        }
+
+        conn.socket.write(data, (err?: Error | null) => {
+            if(err) {
+                reject(err)
+            } else {
+                resolve()
+            }
+        })
+    })
+}
 
 
 
 async function serveClient(conn: TCPConn): Promise<void> {
-    const buf: DynBuf = { data: Buffer.alloc(0), length: 0, start: 0 }
+    const buf: DynBuf = { data: Buffer.alloc(0), length: 0}
     while(true) {
         // incercare de a lua 1 request header din buffer
         const msg: null | HTTPReq = cutMessage(buf)
@@ -145,7 +148,8 @@ async function newConn(socket: net.Socket): Promise<void> {
 
 
 let server = net.createServer({
-    pauseOnConnect: true    // previne 'data' loss
+    pauseOnConnect: true,    // previne 'data' loss
+    noDelay: true
 })
 server.on('connection', newConn)
 server.on('error', (err: Error)=> { throw err } )
@@ -153,4 +157,3 @@ server.on('error', (err: Error)=> { throw err } )
 server.listen({host: '127.0.0.1', port: 1234}, () => {
     console.log('Server listening')
 })
-

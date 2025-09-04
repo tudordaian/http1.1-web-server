@@ -1,5 +1,5 @@
 import * as net from "net"
-import {bufPush} from "./buffer/buffer_utils"
+import {bufPush} from "./utils/buffer/buffer_utils"
 import {DynBuf, BodyReader, HTTPReq, HTTPRes} from "./types/types";
 import {HTTPError} from "./errors/errors";
 import {cutMessage} from "./http/http_parser";

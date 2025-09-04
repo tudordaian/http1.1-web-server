@@ -1,4 +1,4 @@
-import {DynBuf} from "../types/types";
+import {DynBuf} from "../../types/types";
 
 export function bufPush(buf: DynBuf, data: Buffer): void {
     const newLen = buf.length + data.length;

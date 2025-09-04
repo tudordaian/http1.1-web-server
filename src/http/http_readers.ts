@@ -1,8 +1,9 @@
 import { DynBuf, BodyReader, HTTPReq } from "../types/types";
 import { HTTPError } from "../errors/errors";
-import { bufPush, bufPop } from "../buffer/buffer_utils";
+import { bufPush, bufPop } from "../utils/buffer/buffer_utils";
 import { fieldGet } from "./http_protocol";
 import { soRead, TCPConn } from "../server";
+import {BufferGenerator} from "../utils/generator/generator";
 
 function parseDec(fieldValue: string): number {
     return parseInt(fieldValue, 10);
@@ -77,4 +78,19 @@ export function readerFromMemory(data: Buffer): BodyReader {
             }
         }
     };
+}
+
+export function readerFromGenerator(gen: BufferGenerator): BodyReader {
+    return {
+        length: -1,
+        read: async(): Promise<Buffer> => {
+            const r = await gen.next()
+            if(r.done) {
+                return Buffer.from('')  // EOF
+            } else {
+                console.assert(r.value.length > 0)
+                return r.value
+            }
+        }
+    }
 }

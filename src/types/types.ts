@@ -3,6 +3,7 @@ export type DynBuf = {
     length: number,
 };
 
+// interfata de read/write from/to HTTP body
 export type BodyReader = {
     // "Content-Length", -1 daca e necunoscut
     length: number,

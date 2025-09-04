@@ -111,8 +111,8 @@ async function serveClient(conn: TCPConn): Promise<void> {
 
         // procesare mesaj si trimitere response
         const reqBody: BodyReader = readerFromReq(conn, buf, msg)
-        const res: HTTPRes = await handleReq(msg, reqBody)
-        await writeHTTPResp(conn, res)
+        const resp: HTTPRes = await handleReq(msg, reqBody)
+        await writeHTTPResp(conn, resp)
         // inchide conexiunea pt HTTP 1.0
         if (msg.version === '1.0') {
             return

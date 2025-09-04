@@ -1,22 +1,28 @@
 import { HTTPRes } from "../types/types";
-import { encodeHTTPResp, fieldGet } from "./http_protocol";
+import { encodeHTTPResp } from "./http_protocol";
 import { soWrite, TCPConn } from "../server";
 
 export async function writeHTTPResp(conn: TCPConn, resp: HTTPRes): Promise<void> {
     if (resp.body.length < 0) {
-        throw new Error('TODO: Chunked encoding');
+        resp.headers.push(Buffer.from('Transfer-Encoding: chunked'))
+    } else {
+        resp.headers.push(Buffer.from(`Content-Length: ${resp.body.length}`))
     }
-    // setare 'Content-Length' field
-    console.assert(!fieldGet(resp.headers, 'Content-Length'));
-    resp.headers.push(Buffer.from(`Content-Length: ${resp.body.length}`));
-    // write header-ul
+    // write header
     await soWrite(conn, encodeHTTPResp(resp));
-    // write body-ul
-    while (true) {
-        const data = await resp.body.read();
-        if (data.length === 0) {
-            break;
+    // write body
+    const crlf = Buffer.from('\r\n')
+    for(let last = false; !last;) {
+        let data = await resp.body.read()
+        last = (data.length === 0) // eof?
+        if(resp.body.length < 0) { // chunked encoding
+            data = Buffer.concat([
+                Buffer.from(data.length.toString(16)), crlf,
+                data, crlf,
+            ])
         }
-        await soWrite(conn, data);
+        if(data.length) {
+            await soWrite(conn, data)
+        }
     }
 }

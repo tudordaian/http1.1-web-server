@@ -1,25 +1,25 @@
-import {HTTPRes} from "../types";
-
-export const getReasonPhrase = (code: number): string => {
-    const reasonPhrases: { [key: number]: string } = {
-        200: 'OK',
-        201: 'Created',
-        204: 'No Content',
-        400: 'Bad Request',
-        401: 'Unauthorized',
-        403: 'Forbidden',
-        404: 'Not Found',
-        405: 'Method Not Allowed',
-        413: 'Payload Too Large',
-        500: 'Internal Server Error',
-        501: 'Not Implemented',
-        502: 'Bad Gateway',
-        503: 'Service Unavailable'
-    };
-    return reasonPhrases[code] || 'Unknown';
-};
+import { HTTPRes } from "../types/types";
 
 export function encodeHTTPResp(resp: HTTPRes): Buffer {
+    const getReasonPhrase = (code: number): string => {
+        const reasonPhrases: { [key: number]: string } = {
+            200: 'OK',
+            201: 'Created',
+            204: 'No Content',
+            400: 'Bad Request',
+            401: 'Unauthorized',
+            403: 'Forbidden',
+            404: 'Not Found',
+            405: 'Method Not Allowed',
+            413: 'Payload Too Large',
+            500: 'Internal Server Error',
+            501: 'Not Implemented',
+            502: 'Bad Gateway',
+            503: 'Service Unavailable'
+        };
+        return reasonPhrases[code] || 'Unknown';
+    };
+
     // status line = HTTP-version SP status-code SP reason-phrase CRLF
     const statusLine = `HTTP/1.1 ${resp.code} ${getReasonPhrase(resp.code)}\r\n`;
 

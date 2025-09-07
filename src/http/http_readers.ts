@@ -1,15 +1,14 @@
+import { DynBuf, BodyReader, HTTPReq } from "../types/types";
+import { HTTPError } from "../errors/errors";
+import { bufPush, bufPop } from "../utils/buffer/buffer_utils";
 import { fieldGet } from "./http_protocol";
-import {BodyReader, HTTPReq} from "../types";
 import { soRead, TCPConn } from "../server";
-import {BufferGenerator, readChunks} from "../../utils/generator/generator";
-import { bufPush, bufPop, DynBuf } from "../../utils/buffer/buffer_utils";
-import { HTTPError } from "../../errors/errors";
-import * as fs from "fs/promises";
+import {BufferGenerator} from "../utils/generator/generator";
 
 function parseDec(fieldValue: string): number {
     return parseInt(fieldValue, 10);
 }
-``
+
 export function readerFromReq(conn: TCPConn, buf: DynBuf, req: HTTPReq): BodyReader {
     let bodyLen = -1;
     const contentLen = fieldGet(req.headers, 'Content-Length');
@@ -33,11 +32,10 @@ export function readerFromReq(conn: TCPConn, buf: DynBuf, req: HTTPReq): BodyRea
         return readerFromConnLength(conn, buf, bodyLen);
     } else if (chunked) {
         // chunked encoding
-        return readerFromGenerator(readChunks(conn, buf))
+        throw new HTTPError(501, 'TODO');
     } else {
         // read restul conexiunii
-        // return readerFromConnEOF(conn, buf) // pt server/1.0
-        throw new HTTPError(400, 'Missing Content-Length or Transfer-Encoding');
+        throw new HTTPError(501, 'TODO');
     }
 }
 
@@ -67,25 +65,6 @@ function readerFromConnLength(conn: TCPConn, buf: DynBuf, remain: number): BodyR
     };
 }
 
-export function readerFromGenerator(gen: BufferGenerator): BodyReader {
-    return {
-        length: -1,
-        read: async(): Promise<Buffer> => {
-            const r = await gen.next()
-            if(r.done) {
-                return Buffer.from('')  // EOF
-            } else {
-                console.assert(r.value.length > 0)
-                return r.value
-            }
-        },
-        close: async(): Promise<void> => {
-            // fortare return pt ca blocul finally sa se execute
-            await gen.return()
-        }
-    }
-}
-
 export function readerFromMemory(data: Buffer): BodyReader {
     let done = false;
     return {
@@ -101,20 +80,17 @@ export function readerFromMemory(data: Buffer): BodyReader {
     };
 }
 
-export function readerFromStaticFile(fp: fs.FileHandle, size: number): BodyReader {
-    const buf = Buffer.allocUnsafe(65536)
-    let got = 0 // octeti cititi pana acum
+export function readerFromGenerator(gen: BufferGenerator): BodyReader {
     return {
-        length: size,
+        length: -1,
         read: async(): Promise<Buffer> => {
-            const r: fs.FileReadResult<Buffer> = await fp.read({buffer: buf})
-            got += r.bytesRead
-            if(got > size || (got < size && r.bytesRead === 0)) {
-                throw new Error('file size changed, abandon it!')
+            const r = await gen.next()
+            if(r.done) {
+                return Buffer.from('')  // EOF
+            } else {
+                console.assert(r.value.length > 0)
+                return r.value
             }
-            // bufferul alocat automat poate fi mai mare
-            return r.buffer.subarray(0, r.bytesRead)
-        },
-        close: async() => await fp.close()
+        }
     }
 }

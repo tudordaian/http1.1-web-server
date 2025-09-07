@@ -1,7 +1,4 @@
-import {DynBuf} from "./types";
-import {soRead, TCPConn} from "../../server/server";
-
-export {DynBuf} from "./types";
+import {DynBuf} from "../../types/types";
 
 export function bufPush(buf: DynBuf, data: Buffer): void {
     const newLen = buf.length + data.length;
@@ -22,12 +19,4 @@ export function bufPush(buf: DynBuf, data: Buffer): void {
 export function bufPop(buf: DynBuf, len: number): void {
     buf.data.copyWithin(0, len, buf.length);
     buf.length -= len;
-}
-
-export async function bufExpectMore(conn: TCPConn, buf: DynBuf, context: string): Promise<void> {
-    const data = await soRead(conn);
-    bufPush(buf, data);
-    if (data.length === 0) {
-        throw new Error(`Unexpected EOF while reading ${context}`);
-    }
 }

@@ -1,11 +1,11 @@
 import * as net from "net"
-import {bufPush} from "./utils/buffer/buffer_utils"
-import {DynBuf, BodyReader, HTTPReq, HTTPRes} from "./types/types";
-import {HTTPError} from "./errors/errors";
+import {bufPush, DynBuf} from "../utils/buffer/buffer_utils"
 import {cutMessage} from "./http/http_parser";
 import {handleReq} from "./http/http_handlers";
 import {readerFromMemory, readerFromReq} from "./http/http_readers";
 import {writeHTTPResp} from "./http/http_writer";
+import {BodyReader, HTTPReq, HTTPRes} from "./types";
+import {HTTPError} from "../errors/errors";
 
 
 // API Promise-based pentru socket-uri TCP
@@ -112,7 +112,12 @@ async function serveClient(conn: TCPConn): Promise<void> {
         // procesare mesaj si trimitere response
         const reqBody: BodyReader = readerFromReq(conn, buf, msg)
         const resp: HTTPRes = await handleReq(msg, reqBody)
-        await writeHTTPResp(conn, resp)
+        try {
+            await writeHTTPResp(conn, resp)
+        } finally {
+            await resp.body.close?.()
+        }
+
         // inchide conexiunea pt HTTP 1.0
         if (msg.version === '1.0') {
             return

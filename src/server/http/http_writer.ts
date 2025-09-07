@@ -1,6 +1,6 @@
 import { encodeHTTPResp } from "./http_protocol";
 import { soWrite, TCPConn } from "../server";
-import {HTTPRes} from "../types";
+import {HTTPRes} from "../types/types";
 
 export async function writeHTTPResp(conn: TCPConn, resp: HTTPRes): Promise<void> {
     if (resp.body.length < 0) {

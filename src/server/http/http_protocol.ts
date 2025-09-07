@@ -1,4 +1,4 @@
-import {HTTPRes} from "../types";
+import {HTTPRes} from "../types/types";
 
 export const getReasonPhrase = (code: number): string => {
     const reasonPhrases: { [key: number]: string } = {

@@ -1,4 +1,4 @@
-import {HTTPRes} from "../server/types";
+import {HTTPRes} from "../server/types/types";
 import {readerFromMemory} from "../server/http/http_readers";
 
 export class HTTPError extends Error {

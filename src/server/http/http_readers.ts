@@ -1,5 +1,5 @@
 import { fieldGet } from "./http_protocol";
-import {BodyReader, HTTPReq} from "../types";
+import {BodyReader, HTTPReq} from "../types/types";
 import { soRead, TCPConn } from "../server";
 import {BufferGenerator, readChunks} from "../../utils/generator/generator";
 import { bufPush, bufPop, DynBuf } from "../../utils/buffer/buffer_utils";
@@ -9,7 +9,7 @@ import * as fs from "fs/promises";
 function parseDec(fieldValue: string): number {
     return parseInt(fieldValue, 10);
 }
-``
+
 export function readerFromReq(conn: TCPConn, buf: DynBuf, req: HTTPReq): BodyReader {
     let bodyLen = -1;
     const contentLen = fieldGet(req.headers, 'Content-Length');

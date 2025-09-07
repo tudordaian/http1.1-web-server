@@ -1,4 +1,4 @@
-import {BodyReader, HTTPRes} from "../server/types";
+import {BodyReader, HTTPRes} from "../server/types/types";
 import * as fs from "fs/promises";
 import {resp404} from "../errors/errors";
 import {readerFromStaticFile} from "../server/http/http_readers";

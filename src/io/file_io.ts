@@ -14,7 +14,7 @@ export async function serveStaticFile(path: string): Promise<HTTPRes> {
         }
         const size = stat.size;
         try {
-            const reader: BodyReader = readerFromStaticFile(fp, size);
+            const reader: BodyReader = readerFromStaticFile(fp, 0, size);
             return {
                 code: 200,
                 headers: [],
@@ -30,5 +30,3 @@ export async function serveStaticFile(path: string): Promise<HTTPRes> {
         await fp?.close();
     }
 }
-
-

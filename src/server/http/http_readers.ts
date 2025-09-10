@@ -101,17 +101,32 @@ export function readerFromMemory(data: Buffer): BodyReader {
     };
 }
 
-export function readerFromStaticFile(fp: fs.FileHandle, size: number): BodyReader {
+export function readerFromStaticFile(fp: fs.FileHandle, start: number, end: number): BodyReader {
     const buf = Buffer.allocUnsafe(65536)
-    let got = 0 // octeti cititi pana acum
+    let offset = start            // pozitia curenta in fisier
+    const totalSize = end - start // dimensiunea totala de citit
+    let got = 0                   // octeti cititi pana acum
     return {
-        length: size,
+        length: totalSize,
         read: async(): Promise<Buffer> => {
-            const r: fs.FileReadResult<Buffer> = await fp.read({buffer: buf})
-            got += r.bytesRead
-            if(got > size || (got < size && r.bytesRead === 0)) {
-                throw new Error('file size changed, abandon it!')
+            if (offset >= end) {
+                return Buffer.from(''); // EOF - am ajuns la sfarsitul intervalului
             }
+
+            const maxread = Math.min(buf.length, end - offset); // poate fi 0
+            const r: fs.FileReadResult<Buffer> = await fp.read({
+                buffer: buf,
+                position: offset,
+                length: maxread,
+            });
+
+            got += r.bytesRead
+            offset += r.bytesRead
+
+            if(got > totalSize || (got < totalSize && r.bytesRead === 0 && offset < end)) {
+                throw new Error('file size changed or unexpected EOF, abandon it!')
+            }
+
             // bufferul alocat automat poate fi mai mare
             return r.buffer.subarray(0, r.bytesRead)
         },

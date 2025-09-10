@@ -1,8 +1,8 @@
 import { encodeHTTPResp } from "./http_protocol";
 import { soWrite, TCPConn } from "../server";
-import {HTTPRes} from "../types/types";
+import {HTTPRes, BodyReader} from "../types/types";
 
-export async function writeHTTPResp(conn: TCPConn, resp: HTTPRes): Promise<void> {
+export async function writeHTTPHeader(conn: TCPConn, resp: HTTPRes): Promise<void> {
     if (resp.body.length < 0) {
         resp.headers.push(Buffer.from('Transfer-Encoding: chunked'))
     } else {
@@ -10,12 +10,15 @@ export async function writeHTTPResp(conn: TCPConn, resp: HTTPRes): Promise<void>
     }
     // write header
     await soWrite(conn, encodeHTTPResp(resp));
+}
+
+export async function writeHTTPBody(conn: TCPConn, body: BodyReader): Promise<void> {
     // write body
     const crlf = Buffer.from('\r\n')
-        for(let last = false; !last;) {
-        let data = await resp.body.read()
+    for(let last = false; !last;) {
+        let data = await body.read()
         last = (data.length === 0) // eof?
-        if(resp.body.length < 0) { // chunked encoding
+        if(body.length < 0) { // chunked encoding
             data = Buffer.concat([
                 Buffer.from(data.length.toString(16)), crlf,
                 data, crlf,
@@ -25,4 +28,9 @@ export async function writeHTTPResp(conn: TCPConn, resp: HTTPRes): Promise<void>
             await soWrite(conn, data)
         }
     }
+}
+
+export async function writeHTTPResp(conn: TCPConn, resp: HTTPRes): Promise<void> {
+    await writeHTTPHeader(conn, resp);
+    await writeHTTPBody(conn, resp.body);
 }

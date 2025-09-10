@@ -111,7 +111,11 @@ async function serveClient(conn: TCPConn): Promise<void> {
         const reqBody: BodyReader = readerFromReq(conn, buf, msg)
         const resp: HTTPRes = await handleReq(msg, reqBody)
         try {
-            await writeHTTPResp(conn, resp)
+            await writeHTTPHeader(conn, resp)
+            if (msg.method !== 'HEAD') {
+                // omit the body for HEAD requests
+                await writeHTTPBody(conn, resp.body)
+            }
         } finally {
             await resp.body.close?.()
         }

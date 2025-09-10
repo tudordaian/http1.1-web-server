@@ -17,7 +17,7 @@ export async function handleReq(req: HTTPReq, body: BodyReader): Promise<HTTPRes
             throw new HTTPError(403, getReasonPhrase(403))
         }
         
-        return await serveStaticFile(uri.slice('/files/'.length));
+        return await serveStaticFile(uri.slice('/files/'.length), req);
     }
 
     switch (uri) {

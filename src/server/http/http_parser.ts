@@ -76,3 +76,63 @@ export function cutMessage(buf: DynBuf): null | HTTPReq {
     bufPop(buf, idx + 4);
     return msg;
 }
+
+// range-spec   = int-range
+//              / suffix-range
+//              / other-range
+// int-range    = first-pos "-" [ last-pos ]
+// suffix-range = "-" suffix-length
+type HTTPRange = [number, number|null] | number;
+
+export function parseBytesRanges(r: null | Buffer): HTTPRange[] {
+    if (!r) {
+        return [];
+    }
+
+    const rangeHeader = r.toString('latin1').trim();
+
+    // verificare daca incepe cu "bytes="
+    if (!rangeHeader.startsWith('bytes=')) {
+        throw new HTTPError(400, 'Invalid Range header format');
+    }
+
+    const rangeSet = rangeHeader.slice(6); // Remove "bytes="
+    const trimmedSpec = rangeSet.trim();
+
+    if (trimmedSpec === '') {
+        return [];
+    }
+
+    // verificare pentru suffix-range: "-suffix-length"
+    if (trimmedSpec.startsWith('-')) {
+        const suffixLength = parseInt(trimmedSpec.slice(1), 10);
+        if (isNaN(suffixLength) || suffixLength < 0) {
+            throw new HTTPError(400, 'Invalid suffix-range format');
+        }
+        return [suffixLength];
+    }
+
+    // int-range: "first-pos-[last-pos]"
+    const dashIndex = trimmedSpec.indexOf('-');
+    if (dashIndex === -1) {
+        throw new HTTPError(400, 'Invalid range-spec format');
+    }
+
+    const firstPosStr = trimmedSpec.slice(0, dashIndex);
+    const lastPosStr = trimmedSpec.slice(dashIndex + 1);
+
+    const firstPos = parseInt(firstPosStr, 10);
+    if (isNaN(firstPos) || firstPos < 0) {
+        throw new HTTPError(400, 'Invalid first-pos in range');
+    }
+
+    let lastPos: number | null = null;
+    if (lastPosStr !== '') {
+        lastPos = parseInt(lastPosStr, 10);
+        if (isNaN(lastPos) || lastPos < firstPos) {
+            throw new HTTPError(400, 'Invalid last-pos in range');
+        }
+    }
+
+    return [[firstPos, lastPos]];
+}

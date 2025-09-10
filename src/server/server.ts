@@ -88,8 +88,6 @@ export function soWrite(conn: TCPConn, data: Buffer): Promise<void> {
     })
 }
 
-
-
 async function serveClient(conn: TCPConn): Promise<void> {
     const buf: DynBuf = { data: Buffer.alloc(0), length: 0}
     while(true) {

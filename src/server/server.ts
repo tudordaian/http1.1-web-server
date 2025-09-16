@@ -96,6 +96,7 @@ async function serveClient(conn: TCPConn): Promise<void> {
         const msg: null | HTTPReq = cutMessage(buf)
         if(!msg) {
             // mai trebuie date
+            // TODO: remove soRead()
             const data: Buffer = await soRead(conn)
             bufPush(buf, data)
             // EOF?
@@ -126,7 +127,7 @@ async function serveClient(conn: TCPConn): Promise<void> {
             return
         }
         // asigurarea ca req body e consumat complet
-        while ((await reqBody.read()).length > 0) { /* nimic */ }
+        for await (const chunk of reqBody.read) { /* nimic */ }
 
     }
 }

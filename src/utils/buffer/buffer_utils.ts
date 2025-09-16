@@ -25,6 +25,7 @@ export function bufPop(buf: DynBuf, len: number): void {
 }
 
 export async function bufExpectMore(conn: TCPConn, buf: DynBuf, context: string): Promise<void> {
+    // TODO: remove soRead()
     const data = await soRead(conn);
     bufPush(buf, data);
     if (data.length === 0) {

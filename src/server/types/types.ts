@@ -1,9 +1,11 @@
+import stream from "node:stream";
+
 // interfata de read/write from/to HTTP body
 export type BodyReader = {
     // "Content-Length", -1 daca e necunoscut
     length: number,
-    // read data, returneaza un Buffer gol dupa EOF
-    read: () => Promise<Buffer>,
+    // read data, returneaza null ca EOF
+    read: stream.Readable,
     // cleanup optional
     close?: () => Promise<void>,
 }

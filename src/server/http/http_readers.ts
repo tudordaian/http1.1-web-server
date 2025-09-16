@@ -5,6 +5,7 @@ import {BufferGenerator, readChunks} from "../../utils/generator/generator";
 import { bufPush, bufPop, DynBuf } from "../../utils/buffer/buffer_utils";
 import { HTTPError } from "../../errors/errors";
 import * as fs from "fs/promises";
+import stream from "node:stream";
 
 function parseDec(fieldValue: string): number {
     return parseInt(fieldValue, 10);
@@ -44,41 +45,45 @@ export function readerFromReq(conn: TCPConn, buf: DynBuf, req: HTTPReq): BodyRea
 function readerFromConnLength(conn: TCPConn, buf: DynBuf, remain: number): BodyReader {
     return {
         length: remain,
-        read: async (): Promise<Buffer> => {
-            if (remain === 0) {
-                return Buffer.from(''); // done
+        read: new stream.Readable({
+            read() {
+                (async () => {
+                    try {
+                        if (remain === 0) {
+                            this.push(null); // EOF signal
+                            return;
+                        }
+                        if (buf.length === 0) {
+                            // incercare de a obtine date
+                            // TODO: remove soRead()
+                            const data = await soRead(conn);
+                            bufPush(buf, data);
+                            if (data.length === 0) {
+                                // se asteapta mai multe date!
+                                this.destroy(new Error('Unexpected EOF from HTTP body'));
+                                return;
+                            }
+                        }
+                        // consuma date din buffer
+                        const consume = Math.min(buf.length, remain);
+                        remain -= consume;
+                        const data = Buffer.from(buf.data.subarray(0, consume));
+                        bufPop(buf, consume);
+                        this.push(data);
+                    } catch (err) {
+                        this.destroy(err instanceof Error ? err : new Error('Read error'));
+                    }
+                })();
             }
-            if (buf.length === 0) {
-                // incercare de a obtine date
-                const data = await soRead(conn);
-                bufPush(buf, data);
-                if (data.length === 0) {
-                    // se asteapta mai multe date!
-                    throw new Error('Unexpected EOF from HTTP body');
-                }
-            }
-            // consuma date din buffer
-            const consume = Math.min(buf.length, remain);
-            remain -= consume;
-            const data = Buffer.from(buf.data.subarray(0, consume));
-            bufPop(buf, consume);
-            return data;
-        }
+        })
     };
 }
+
 
 export function readerFromGenerator(gen: BufferGenerator): BodyReader {
     return {
         length: -1,
-        read: async(): Promise<Buffer> => {
-            const r = await gen.next()
-            if(r.done) {
-                return Buffer.from('')  // EOF
-            } else {
-                console.assert(r.value.length > 0)
-                return r.value
-            }
-        },
+        read: stream.Readable.from(gen),
         close: async(): Promise<void> => {
             // fortare return pt ca blocul finally sa se execute
             await gen.return()
@@ -90,14 +95,19 @@ export function readerFromMemory(data: Buffer): BodyReader {
     let done = false;
     return {
         length: data.length,
-        read: async (): Promise<Buffer> => {
-            if (done) {
-                return Buffer.from('');
-            } else {
-                done = true;
-                return data;
+        read: new stream.Readable({
+            read() {
+                (async () => {
+                    if(done) {
+                        this.push(null)
+                        return
+                    } else {
+                        done = true
+                        this.push(data)
+                    }
+                })()
             }
-        }
+        })
     };
 }
 
@@ -108,28 +118,38 @@ export function readerFromStaticFile(fp: fs.FileHandle, start: number, end: numb
     let got = 0                   // octeti cititi pana acum
     return {
         length: totalSize,
-        read: async(): Promise<Buffer> => {
-            if (offset >= end) {
-                return Buffer.from(''); // EOF - am ajuns la sfarsitul intervalului
+        read: new stream.Readable({
+            read() {
+                (async() => {
+                    try {
+                        if (offset >= end) {
+                            this.push(null) // EOF - am ajuns la sfarsitul intervalului
+                            return
+                        }
+
+                        const maxread = Math.min(buf.length, end - offset); // poate fi 0
+                        const r: fs.FileReadResult<Buffer> = await fp.read({
+                            buffer: buf,
+                            position: offset,
+                            length: maxread,
+                        });
+
+                        got += r.bytesRead
+                        offset += r.bytesRead
+
+                        if(got > totalSize || (got < totalSize && r.bytesRead === 0 && offset < end)) {
+                            this.destroy(new Error('file size changed or unexpected EOF, abandon it!'))
+                        }
+
+                        // bufferul alocat automat poate fi mai mare
+                        this.push(r.buffer.subarray(0, r.bytesRead))
+                        return
+                    } catch(err) {
+                        this.destroy(err instanceof Error ? err : new Error('File read error'))
+                    }
+                })()
             }
-
-            const maxread = Math.min(buf.length, end - offset); // poate fi 0
-            const r: fs.FileReadResult<Buffer> = await fp.read({
-                buffer: buf,
-                position: offset,
-                length: maxread,
-            });
-
-            got += r.bytesRead
-            offset += r.bytesRead
-
-            if(got > totalSize || (got < totalSize && r.bytesRead === 0 && offset < end)) {
-                throw new Error('file size changed or unexpected EOF, abandon it!')
-            }
-
-            // bufferul alocat automat poate fi mai mare
-            return r.buffer.subarray(0, r.bytesRead)
-        },
+        }),
         close: async() => await fp.close()
     }
 }

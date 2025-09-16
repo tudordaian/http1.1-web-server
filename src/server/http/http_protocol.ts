@@ -1,4 +1,5 @@
-import {HTTPRes} from "../types/types";
+import {HTTPReq, HTTPRes} from "../types/types";
+import {gzipFilter} from "../../utils/compression/compression";
 
 export const getReasonPhrase = (code: number): string => {
     const reasonPhrases: { [key: number]: string } = {
@@ -6,6 +7,7 @@ export const getReasonPhrase = (code: number): string => {
         201: 'Created',
         204: 'No Content',
         206: 'Partial Content',
+        304: 'Not Modified',
         400: 'Bad Request',
         401: 'Unauthorized',
         403: 'Forbidden',
@@ -52,4 +54,40 @@ export function fieldGet(headers: Buffer[], key: string): null | Buffer {
 
     }
     return null
+}
+
+// functia nu e compatibila daca header-ul din key apare de mai multe ori
+// functia nu e compatibila cu liste de valori separate de ';' (de ex weight)
+function fieldGetList(headers: Buffer[], key: string): string[] {
+    const lowerKey = key.toLowerCase()
+    for(const header of headers) {
+        const headerStr = header.toString('latin1')
+        const colonIdx = headerStr.indexOf(':')
+
+        if(colonIdx <= 0) continue
+
+        const fieldName = headerStr.substring(0, colonIdx).trim().toLowerCase()
+        if(fieldName === lowerKey) {
+            return headerStr.substring(colonIdx + 1).trim().split(', ')
+        }
+    }
+    return []
+}
+
+// (doar gzip)
+export function enableCompression(req: HTTPReq, res: HTTPRes): void {
+    // informarea proxy-urilor ca response-ul e variabil
+
+    res.headers.push(Buffer.from('Vary: Content-Encoding'))
+    if(fieldGet(req.headers, 'Range')) {
+        return  // incompatibil!
+    }
+    const codecs: string[] = fieldGetList(req.headers, 'Accept-Encoding')
+    if(!codecs.includes('gzip')) {
+        return
+    }
+    // transformare response cu gzip
+    res.headers.push(Buffer.from('Content-Encoding: gzip'))
+    res.body = gzipFilter(res.body)
+
 }

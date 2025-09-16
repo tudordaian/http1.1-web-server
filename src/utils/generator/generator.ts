@@ -16,7 +16,7 @@ export async function *countSheep(): BufferGenerator {
 }
 
 // decodificarea chunked encodingului si yield la date
-export async function* readChunks(conn: TCPConn, buf: DynBuf): BufferGenerator {
+export async function *readChunks(conn: TCPConn, buf: DynBuf): BufferGenerator {
     for(let last = false; !last;) {
         // read la linia cu chunk-size
         const idx = buf.data.subarray(0, buf.length).indexOf('\r\n');

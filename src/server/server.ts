@@ -3,9 +3,10 @@ import {bufPush, DynBuf} from "../utils/buffer/buffer_utils"
 import {cutMessage} from "./http/http_parser";
 import {handleReq} from "./http/http_handlers";
 import {readerFromMemory, readerFromReq} from "./http/http_readers";
-import {writeHTTPResp} from "./http/http_writer";
+import {writeHTTPBody, writeHTTPHeader, writeHTTPResp} from "./http/http_writer";
 import {BodyReader, HTTPReq, HTTPRes} from "./types/types";
 import {HTTPError} from "../errors/errors";
+import {enableCompression} from "./http/http_protocol";
 
 
 // API Promise-based pentru socket-uri TCP
@@ -111,9 +112,9 @@ async function serveClient(conn: TCPConn): Promise<void> {
         const reqBody: BodyReader = readerFromReq(conn, buf, msg)
         const resp: HTTPRes = await handleReq(msg, reqBody)
         try {
+            enableCompression(msg, resp)
             await writeHTTPHeader(conn, resp)
             if (msg.method !== 'HEAD') {
-                // omit the body for HEAD requests
                 await writeHTTPBody(conn, resp.body)
             }
         } finally {

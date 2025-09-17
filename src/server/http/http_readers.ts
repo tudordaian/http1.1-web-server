@@ -112,44 +112,10 @@ export function readerFromMemory(data: Buffer): BodyReader {
 }
 
 export function readerFromStaticFile(fp: fs.FileHandle, start: number, end: number): BodyReader {
-    const buf = Buffer.allocUnsafe(65536)
-    let offset = start            // pozitia curenta in fisier
     const totalSize = end - start // dimensiunea totala de citit
-    let got = 0                   // octeti cititi pana acum
     return {
         length: totalSize,
-        read: new stream.Readable({
-            read() {
-                (async() => {
-                    try {
-                        if (offset >= end) {
-                            this.push(null) // EOF - am ajuns la sfarsitul intervalului
-                            return
-                        }
-
-                        const maxread = Math.min(buf.length, end - offset); // poate fi 0
-                        const r: fs.FileReadResult<Buffer> = await fp.read({
-                            buffer: buf,
-                            position: offset,
-                            length: maxread,
-                        });
-
-                        got += r.bytesRead
-                        offset += r.bytesRead
-
-                        if(got > totalSize || (got < totalSize && r.bytesRead === 0 && offset < end)) {
-                            this.destroy(new Error('file size changed or unexpected EOF, abandon it!'))
-                        }
-
-                        // bufferul alocat automat poate fi mai mare
-                        this.push(r.buffer.subarray(0, r.bytesRead))
-                        return
-                    } catch(err) {
-                        this.destroy(err instanceof Error ? err : new Error('File read error'))
-                    }
-                })()
-            }
-        }),
+        read: fp.createReadStream({start: start, end: end - 1}),
         close: async() => await fp.close()
     }
 }

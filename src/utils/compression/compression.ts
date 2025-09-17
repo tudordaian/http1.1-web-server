@@ -3,20 +3,6 @@ import stream from "node:stream";
 import * as zlib from "node:zlib";
 import {pipeline} from "node:stream/promises";
 
-// function body2stream(reader: BodyReader): stream.Readable {
-//     let self: stream.Readable | null = null
-//     self = new stream.Readable({
-//         read: async() => {
-//             try {
-//                 const data: Buffer = await reader.read()
-//                 self!.push(data.length > 0 ? data : null)
-//             } catch(err) {
-//                 self!.destroy(err instanceof Error ? err : new Error('IO error'))
-//             }
-//         }
-//     })
-//     return self
-// }
 
 export function gzipFilter(reader: BodyReader): BodyReader {
     /* constanta Z_SYNC_FLUSH permite sa se dea flush imediat buffer-ului intern functiei

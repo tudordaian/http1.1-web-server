@@ -129,7 +129,7 @@ export function parseBytesRanges(r: null | Buffer): HTTPRange[] {
     let lastPos: number | null = null;
     if (lastPosStr !== '') {
         lastPos = parseInt(lastPosStr, 10);
-        if (isNaN(lastPos) || lastPos < firstPos) {
+        if (isNaN(lastPos) || lastPos < 0) {
             throw new HTTPError(400, 'Invalid last-pos in range');
         }
     }

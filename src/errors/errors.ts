@@ -11,12 +11,12 @@ export class HTTPError extends Error {
     }
 }
 
-export function resp404(): HTTPRes {
+export function respError(code: number, message: string): HTTPRes {
     return {
-        code: 404,
+        code: code,
         headers: [
             Buffer.from('Content-Type: text/plain')
         ],
-        body: readerFromMemory(Buffer.from('404 Not Found\n'))
+        body: readerFromMemory(Buffer.from(`${code} ${message}\n`))
     };
 }

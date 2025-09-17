@@ -1,6 +1,6 @@
 import {BodyReader, HTTPRes, HTTPReq} from "../server/types/types";
 import * as fs from "fs/promises";
-import {resp404, HTTPError} from "../errors/errors";
+import {HTTPError, respError} from "../errors/errors";
 import {readerFromStaticFile} from "../server/http/http_readers";
 import {fieldGet} from "../server/http/http_protocol";
 import {parseBytesRanges} from "../server/http/http_parser";
@@ -12,17 +12,19 @@ export async function serveStaticFile(path: string, req?: HTTPReq): Promise<HTTP
         fp = await fs.open(path, 'r');
         const stat = await fp.stat();
         if (!stat.isFile()) {
-            return resp404();
+            return respError(404, "Not Found");
         }
         const size = stat.size;
-        try {
-            return staticFileResp(req, fp, size);
-        } finally {
-            fp = null;  // ownershipul e transferat prin staticFileResp()
-        }
+
+        const result = staticFileResp(req, fp, size);
+        fp = null;  // ownership transferat la BodyReader
+        return result;
     } catch (exc) {
         console.info('error serving file:', exc);
-        return resp404();
+        if (exc instanceof HTTPError) {
+            return respError(exc.code, exc.message);
+        }
+        return respError(404, "Not Found");
     } finally {
         await fp?.close();
     }
@@ -51,7 +53,7 @@ function staticFileResp(req: HTTPReq | undefined, fp: fs.FileHandle, size: numbe
         ranges = parseBytesRanges(rangeHeader);
     } catch (err) {
         // Range header invalid - returneaza 400 Bad Request
-        throw new HTTPError(400, 'Invalid Range header');
+        throw new HTTPError(400, 'Bad Request');
     }
 
     if (ranges.length === 0) {
@@ -88,6 +90,10 @@ function staticFileResp(req: HTTPReq | undefined, fp: fs.FileHandle, size: numbe
         const [rangeStart, rangeEnd] = range;
         start = rangeStart;
         end = rangeEnd !== null ? rangeEnd + 1 : size; // end e exclusiv in readerFromStaticFile
+
+        if (rangeEnd !== null && rangeStart > rangeEnd) {
+            throw new HTTPError(416, 'Range Not Satisfiable');
+        }
 
         // Validare range
         if (start >= size) {

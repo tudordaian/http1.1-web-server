@@ -1,6 +1,6 @@
 import { HTTPError } from "../../errors/errors";
 import { bufPop, DynBuf } from "../../utils/buffer/buffer_utils";
-import {HTTPReq} from "../types/types";
+import {HTTPReq} from "./types";
 
 const kMaxHeaderLen = 1024 * 8;
 

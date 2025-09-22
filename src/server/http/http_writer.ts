@@ -1,6 +1,6 @@
 import { encodeHTTPResp } from "./http_protocol";
 import { soWrite, TCPConn } from "../server";
-import {HTTPRes, BodyReader} from "../types/types";
+import {HTTPRes, BodyReader} from "./types";
 import stream from "node:stream";
 import {pipeline} from "node:stream/promises";
 

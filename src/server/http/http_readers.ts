@@ -1,5 +1,5 @@
 import { fieldGet } from "./http_protocol";
-import {BodyReader, HTTPReq} from "../types/types";
+import {BodyReader, HTTPReq} from "./types";
 import { soRead, TCPConn } from "../server";
 import {BufferGenerator, readChunks} from "../../utils/generator/generator";
 import { bufPush, bufPop, DynBuf } from "../../utils/buffer/buffer_utils";

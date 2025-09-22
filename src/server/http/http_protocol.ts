@@ -1,4 +1,4 @@
-import {HTTPReq, HTTPRes} from "../types/types";
+import {HTTPReq, HTTPRes} from "./types";
 import {gzipFilter} from "../../utils/compression/compression";
 
 export const getReasonPhrase = (code: number): string => {

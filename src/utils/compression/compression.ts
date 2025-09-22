@@ -1,4 +1,4 @@
-import {BodyReader} from "../../server/types/types";
+import {BodyReader} from "../../server/http/types";
 import stream from "node:stream";
 import * as zlib from "node:zlib";
 import {pipeline} from "node:stream/promises";

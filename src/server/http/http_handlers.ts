@@ -1,6 +1,6 @@
 import {readerFromGenerator, readerFromMemory} from "./http_readers";
 import {countSheep} from "../../utils/generator/generator";
-import {BodyReader, HTTPReq, HTTPRes} from "../types/types";
+import {BodyReader, HTTPReq, HTTPRes} from "./types";
 import {HTTPError} from "../../errors/errors";
 import {getReasonPhrase} from "./http_protocol";
 import {serveStaticFile} from "../../io/file_io";

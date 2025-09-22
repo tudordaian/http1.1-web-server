@@ -4,7 +4,7 @@ import {cutMessage} from "./http/http_parser";
 import {handleReq} from "./http/http_handlers";
 import {readerFromMemory, readerFromReq} from "./http/http_readers";
 import {writeHTTPBody, writeHTTPHeader, writeHTTPResp} from "./http/http_writer";
-import {BodyReader, HTTPReq, HTTPRes} from "./types/types";
+import {BodyReader, HTTPReq, HTTPRes} from "./http/types";
 import {HTTPError} from "../errors/errors";
 import {enableCompression} from "./http/http_protocol";
 
